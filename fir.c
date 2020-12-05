@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ladspa.h>
-#include "example.h"
+
+#define SIMPLE_QUOTE(x) #x
+#define QUOTE(x) SIMPLE_QUOTE(x)
+#include QUOTE(FIR_HEADER)
 
 #define FIR_INPUT 0
 #define FIR_OUTPUT 1
