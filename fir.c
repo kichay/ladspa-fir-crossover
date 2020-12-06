@@ -4,6 +4,11 @@
 
 #define SIMPLE_QUOTE(x) #x
 #define QUOTE(x) SIMPLE_QUOTE(x)
+
+#ifndef FIR_HEADER
+#define FIR_HEADER example.h
+#endif
+
 #include QUOTE(FIR_HEADER)
 
 #define FIR_INPUT 0
