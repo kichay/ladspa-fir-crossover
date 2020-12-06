@@ -30,13 +30,14 @@ void activate (
   LADSPA_Handle Instance
 ) {
   FIRInstance * psFIRInstance;
-  psFIRInstance = (FIRInstance *)Instance;
   LADSPA_Data * pfFIRBuffer;
-  pfFIRBuffer = psFIRInstance->m_pfFIRBuffer;
-
   unsigned long lIndex;
-  for (lIndex = 0; lIndex < FIR_LENGTH; lIndex++)
+
+  psFIRInstance = (FIRInstance *)Instance;
+  pfFIRBuffer = psFIRInstance->m_pfFIRBuffer;
+  for (lIndex = 0; lIndex < FIR_LENGTH; lIndex++) {
     *(pfFIRBuffer++) = 0;
+  }
 }
 
 void connect_port (
@@ -64,16 +65,16 @@ void run (
   LADSPA_Data * pfInput;
   LADSPA_Data * pfOutput;
   LADSPA_Data * pfHistory;
-  FIRInstance * psFIRInstance;
+  FIRInstance * psFIRInstance; 
+  unsigned long lSampleIndex;
+  unsigned long lHistoryIndex;
+
   psFIRInstance = (FIRInstance *)Instance;
   pfInput = psFIRInstance->m_pfInputBuffer;
   pfOutput = psFIRInstance->m_pfOutputBuffer;
-  pfHistory = psFIRInstance->m_pfFIRBuffer + (FIR_LENGTH - 1);
-
-  unsigned long lSampleIndex;
-  unsigned long lHistoryIndex;
   for (lSampleIndex = 0; lSampleIndex < SampleCount; lSampleIndex++) {
     *(pfOutput) = 0;
+    pfHistory = psFIRInstance->m_pfFIRBuffer + (FIR_LENGTH - 1);
     for (lHistoryIndex = FIR_LENGTH - 1; lHistoryIndex >= 0; lHistoryIndex--)
     {
       if (lHistoryIndex == 0) {
@@ -81,9 +82,8 @@ void run (
       } else {
         *(pfHistory) = *(pfHistory - 1);
       }
-      *(pfOutput) += *(pfHistory) * FIRArray[lHistoryIndex];
+      *(pfOutput) += *(pfHistory--) * FIRArray[lHistoryIndex];
     }
-    pfHistory--;
     pfOutput++;
     pfInput++;
   }
