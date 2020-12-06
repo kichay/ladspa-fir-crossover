@@ -47,8 +47,8 @@ void activate (
 
 void connect_port (
   LADSPA_Handle Instance,
-	unsigned long Port,
-	LADSPA_Data * DataLocation
+  unsigned long Port,
+  LADSPA_Data * DataLocation
 ) {
   FIRInstance * psFIRInstance;
   psFIRInstance = (FIRInstance *)Instance;
