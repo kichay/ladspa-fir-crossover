@@ -36,7 +36,7 @@ void activate (
 
   unsigned long lIndex;
   for (lIndex = 0; lIndex < FIR_LENGTH; lIndex++)
-    *(pfFIRBuffer++) = 0.0;
+    *(pfFIRBuffer++) = 0;
 }
 
 void connect_port (
@@ -63,14 +63,30 @@ void run (
 ) {
   LADSPA_Data * pfInput;
   LADSPA_Data * pfOutput;
+  LADSPA_Data * pfHistory;
   FIRInstance * psFIRInstance;
   psFIRInstance = (FIRInstance *)Instance;
   pfInput = psFIRInstance->m_pfInputBuffer;
   pfOutput = psFIRInstance->m_pfOutputBuffer;
+  pfHistory = psFIRInstance->m_pfFIRBuffer + (FIR_LENGTH - 1);
 
   unsigned long lSampleIndex;
-  for (lSampleIndex = 0; lSampleIndex < SampleCount; lSampleIndex++) 
-    *(pfOutput++) = *(pfInput++);
+  unsigned long lHistoryIndex;
+  for (lSampleIndex = 0; lSampleIndex < SampleCount; lSampleIndex++) {
+    *(pfOutput) = 0;
+    for (lHistoryIndex = FIR_LENGTH - 1; lHistoryIndex >= 0; lHistoryIndex--)
+    {
+      if (lHistoryIndex == 0) {
+        *(pfHistory) = *(pfInput);
+      } else {
+        *(pfHistory) = *(pfHistory - 1);
+      }
+      *(pfOutput) += *(pfHistory) * FIRArray[lHistoryIndex];
+    }
+    pfHistory--;
+    pfOutput++;
+    pfInput++;
+  }
 }
 
 void cleanup(LADSPA_Handle Instance) {
@@ -82,6 +98,7 @@ void cleanup(LADSPA_Handle Instance) {
 }
 
 LADSPA_Descriptor * g_psFIRDescriptor = NULL;
+
 void _init() {
   char ** pcPortNames;
   LADSPA_PortDescriptor * piPortDescriptors;
