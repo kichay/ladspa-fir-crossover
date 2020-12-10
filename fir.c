@@ -27,7 +27,7 @@ LADSPA_Handle instantiate (
 ) {
   FIRInstance * psFIRInstance;
   psFIRInstance = (FIRInstance *)malloc(sizeof(FIRInstance));
-  psFIRInstance->m_pfFIRBuffer = (LADSPA_Data *)malloc(FIR_LENGTH);
+  psFIRInstance->m_pfFIRBuffer = (LADSPA_Data *)malloc(FIR_LENGTH * sizeof(LADSPA_Data));
   return (LADSPA_Handle)psFIRInstance;
 }
 
