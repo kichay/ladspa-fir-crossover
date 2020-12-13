@@ -11,9 +11,10 @@
 
 #include QUOTE(FIR_HEADER)
 
-#define FIR_INPUT 0
-#define FIR_OUTPUT 1
-#define FIR_LENGTH (sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]))
+#define FIR_INPUT_PORT 0
+#define FIR_OUTPUT_PORT 1
+#define FIR_FILTER_LENGTH (sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]))
+#define FIR_BUFFER_LENGTH ((FIR_FILTER_LENGTH - 1) * FIROmmitRatio + 1)
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
@@ -28,7 +29,9 @@ LADSPA_Handle instantiate (
 ) {
   FIRInstance * psFIRInstance;
   psFIRInstance = (FIRInstance *)malloc(sizeof(FIRInstance));
-  psFIRInstance->m_pfFIRBuffer = (LADSPA_Data *)malloc(FIR_LENGTH * sizeof(LADSPA_Data));
+  psFIRInstance->m_pfFIRBuffer = (LADSPA_Data *)malloc(
+    sizeof(LADSPA_Data) * FIR_BUFFER_LENGTH
+  );
   return (LADSPA_Handle)psFIRInstance;
 }
 
@@ -42,7 +45,7 @@ void activate (
   psFIRInstance = (FIRInstance *)Instance;
   psFIRInstance->lFIRBufferOffset = 0;
   pfFIRBuffer = psFIRInstance->m_pfFIRBuffer;
-  for (lIndex = 0; lIndex < FIR_LENGTH; lIndex++) {
+  for (lIndex = 0; lIndex < FIR_BUFFER_LENGTH; lIndex++) {
     *(pfFIRBuffer++) = 0;
   }
 }
@@ -56,10 +59,10 @@ void connect_port (
   psFIRInstance = (FIRInstance *)Instance;
 
   switch (Port) {
-  case FIR_INPUT:
+  case FIR_INPUT_PORT:
     psFIRInstance->m_pfInputBuffer = DataLocation;
     break;
-  case FIR_OUTPUT:
+  case FIR_OUTPUT_PORT:
     psFIRInstance->m_pfOutputBuffer = DataLocation;
     break;
   }
@@ -71,9 +74,9 @@ void run (
 ) {
   LADSPA_Data * pfInput;
   LADSPA_Data * pfOutput;
-  LADSPA_Data * pfHistory;
-  FIRInstance * psFIRInstance; 
-  unsigned long lHistoryIndex;
+  FIRInstance * psFIRInstance;
+  unsigned long lCoefficientIndex;
+  unsigned long lJumpIndex;
 
   psFIRInstance = (FIRInstance *)Instance;
   pfInput = psFIRInstance->m_pfInputBuffer;
@@ -82,26 +85,20 @@ void run (
     pfOutput < psFIRInstance->m_pfOutputBuffer + SampleCount;
     pfOutput++
   ) {
-    pfHistory = psFIRInstance->m_pfFIRBuffer + psFIRInstance->lFIRBufferOffset;
-    *(pfHistory) = *(pfInput++);
+    lJumpIndex = psFIRInstance->lFIRBufferOffset;
+    *(psFIRInstance->m_pfFIRBuffer + lJumpIndex++) = *(pfInput++);
     *(pfOutput) = 0;
     for(
-      lHistoryIndex = 0;
-      lHistoryIndex < psFIRInstance->lFIRBufferOffset + 1;
-      lHistoryIndex++
+      lCoefficientIndex = FIR_FILTER_LENGTH - 1;
+      lCoefficientIndex + 1 > 0;
+      lCoefficientIndex--
     ) {
-      *(pfOutput) += *(pfHistory--) * FIRCoefficients[lHistoryIndex];
-    }
-    pfHistory = psFIRInstance->m_pfFIRBuffer + FIR_LENGTH - 1;
-    for(
-      lHistoryIndex = psFIRInstance->lFIRBufferOffset + 1;
-      lHistoryIndex < FIR_LENGTH;
-      lHistoryIndex++
-    ) {
-      *(pfOutput) += *(pfHistory--) * FIRCoefficients[lHistoryIndex];
+      *(pfOutput) += *(psFIRInstance->m_pfFIRBuffer + lJumpIndex) * FIRCoefficients[lCoefficientIndex];
+      lJumpIndex += FIROmmitRatio;
+      lJumpIndex %= FIR_BUFFER_LENGTH;
     }
     psFIRInstance->lFIRBufferOffset++;
-    psFIRInstance->lFIRBufferOffset %= FIR_LENGTH;
+    psFIRInstance->lFIRBufferOffset %= FIR_BUFFER_LENGTH;
   }
 }
 
@@ -129,16 +126,16 @@ void _init() {
   g_psFIRDescriptor->PortCount = 2;
   piPortDescriptors = (LADSPA_PortDescriptor *)calloc(2, sizeof(LADSPA_PortDescriptor));
   g_psFIRDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
-  piPortDescriptors[FIR_INPUT] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
-  piPortDescriptors[FIR_OUTPUT] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
+  piPortDescriptors[FIR_INPUT_PORT] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
+  piPortDescriptors[FIR_OUTPUT_PORT] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
   pcPortNames = (char **)calloc(2, sizeof(char *));
   g_psFIRDescriptor->PortNames = (const char **)pcPortNames;
-  pcPortNames[FIR_INPUT] = strdup("Input");
-  pcPortNames[FIR_OUTPUT] = strdup("Output");
+  pcPortNames[FIR_INPUT_PORT] = strdup("Input");
+  pcPortNames[FIR_OUTPUT_PORT] = strdup("Output");
   psPortRangeHints = ((LADSPA_PortRangeHint *)calloc(2, sizeof(LADSPA_PortRangeHint)));
   g_psFIRDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
-  psPortRangeHints[FIR_INPUT].HintDescriptor = 0;
-  psPortRangeHints[FIR_OUTPUT].HintDescriptor = 0;
+  psPortRangeHints[FIR_INPUT_PORT].HintDescriptor = 0;
+  psPortRangeHints[FIR_OUTPUT_PORT].HintDescriptor = 0;
   g_psFIRDescriptor->instantiate = instantiate;
   g_psFIRDescriptor->connect_port = connect_port;
   g_psFIRDescriptor->activate = activate;
