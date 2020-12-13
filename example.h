@@ -4,7 +4,7 @@
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
 
-const float FIRArray[] = {
+const float FIRCoefficients[] = {
     -0.000197,
     -1.208879E-6,
     0.000201,

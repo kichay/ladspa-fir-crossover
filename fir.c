@@ -13,7 +13,7 @@
 
 #define FIR_INPUT 0
 #define FIR_OUTPUT 1
-#define FIR_LENGTH (sizeof(FIRArray) / sizeof(FIRArray[0]))
+#define FIR_LENGTH (sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]))
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
@@ -90,7 +90,7 @@ void run (
       lHistoryIndex < psFIRInstance->lFIRBufferOffset + 1;
       lHistoryIndex++
     ) {
-      *(pfOutput) += *(pfHistory--) * FIRArray[lHistoryIndex];
+      *(pfOutput) += *(pfHistory--) * FIRCoefficients[lHistoryIndex];
     }
     pfHistory = psFIRInstance->m_pfFIRBuffer + FIR_LENGTH - 1;
     for(
@@ -98,7 +98,7 @@ void run (
       lHistoryIndex < FIR_LENGTH;
       lHistoryIndex++
     ) {
-      *(pfOutput) += *(pfHistory--) * FIRArray[lHistoryIndex];
+      *(pfOutput) += *(pfHistory--) * FIRCoefficients[lHistoryIndex];
     }
     psFIRInstance->lFIRBufferOffset++;
     psFIRInstance->lFIRBufferOffset %= FIR_LENGTH;
