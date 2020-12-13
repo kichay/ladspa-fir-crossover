@@ -19,6 +19,7 @@ typedef struct {
   LADSPA_Data * m_pfInputBuffer;
   LADSPA_Data * m_pfOutputBuffer;
   LADSPA_Data * m_pfFIRBuffer;
+  unsigned long lFIRBufferOffset;
 } FIRInstance;
 
 LADSPA_Handle instantiate (
@@ -39,6 +40,7 @@ void activate (
   unsigned long lIndex;
 
   psFIRInstance = (FIRInstance *)Instance;
+  psFIRInstance->lFIRBufferOffset = 0;
   pfFIRBuffer = psFIRInstance->m_pfFIRBuffer;
   for (lIndex = 0; lIndex < FIR_LENGTH; lIndex++) {
     *(pfFIRBuffer++) = 0;
@@ -71,25 +73,35 @@ void run (
   LADSPA_Data * pfOutput;
   LADSPA_Data * pfHistory;
   FIRInstance * psFIRInstance; 
-  unsigned long lSampleIndex;
   unsigned long lHistoryIndex;
 
   psFIRInstance = (FIRInstance *)Instance;
   pfInput = psFIRInstance->m_pfInputBuffer;
-  pfOutput = psFIRInstance->m_pfOutputBuffer;
-  for (lSampleIndex = 0; lSampleIndex < SampleCount; lSampleIndex++) {
+  for (
+    pfOutput = psFIRInstance->m_pfOutputBuffer;
+    pfOutput < psFIRInstance->m_pfOutputBuffer + SampleCount;
+    pfOutput++
+  ) {
+    pfHistory = psFIRInstance->m_pfFIRBuffer + psFIRInstance->lFIRBufferOffset;
+    *(pfHistory) = *(pfInput++);
     *(pfOutput) = 0;
-    pfHistory = psFIRInstance->m_pfFIRBuffer + (FIR_LENGTH - 1);
-    for (lHistoryIndex = FIR_LENGTH - 1; lHistoryIndex + 1 > 0; lHistoryIndex--) {
-      if (lHistoryIndex == 0) {
-        *(pfHistory) = *(pfInput);
-      } else {
-        *(pfHistory) = *(pfHistory - 1);
-      }
+    for(
+      lHistoryIndex = 0;
+      lHistoryIndex < psFIRInstance->lFIRBufferOffset + 1;
+      lHistoryIndex++
+    ) {
       *(pfOutput) += *(pfHistory--) * FIRArray[lHistoryIndex];
     }
-    pfOutput++;
-    pfInput++;
+    pfHistory = psFIRInstance->m_pfFIRBuffer + FIR_LENGTH - 1;
+    for(
+      lHistoryIndex = psFIRInstance->lFIRBufferOffset + 1;
+      lHistoryIndex < FIR_LENGTH;
+      lHistoryIndex++
+    ) {
+      *(pfOutput) += *(pfHistory--) * FIRArray[lHistoryIndex];
+    }
+    psFIRInstance->lFIRBufferOffset++;
+    psFIRInstance->lFIRBufferOffset %= FIR_LENGTH;
   }
 }
 
