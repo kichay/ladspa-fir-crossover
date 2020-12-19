@@ -2,8 +2,8 @@
 #include <string.h>
 #include <ladspa.h>
 
-#define SIMPLE_QUOTE(x) #x
-#define QUOTE(x) SIMPLE_QUOTE(x)
+#define STATIC_QUOTE(x) #x
+#define QUOTE(x) STATIC_QUOTE(x)
 
 #ifndef FIR_HEADER
 #define FIR_HEADER example.h
@@ -13,14 +13,16 @@
 
 #define FIR_INPUT_PORT 0
 #define FIR_OUTPUT_PORT 1
-#define FIR_FILTER_LENGTH (sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]))
-#define FIR_BUFFER_LENGTH ((FIR_FILTER_LENGTH - 1) * FIROmmitRatio + 1)
+
+unsigned long g_lFIRLastCoefficientIndex = 0;
+LADSPA_Descriptor * g_psFIRDescriptor = NULL;
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
   LADSPA_Data * m_pfOutputBuffer;
   LADSPA_Data * m_pfFIRBuffer;
-  unsigned long lFIRBufferOffset;
+  LADSPA_Data * m_pfFIRBufferCurrentElement;
+  LADSPA_Data * m_pfFIRBufferLidElement;
 } FIRInstance;
 
 LADSPA_Handle instantiate (
@@ -28,10 +30,13 @@ LADSPA_Handle instantiate (
   unsigned long SampleRate
 ) {
   FIRInstance * psFIRInstance;
+
   psFIRInstance = (FIRInstance *)malloc(sizeof(FIRInstance));
   psFIRInstance->m_pfFIRBuffer = (LADSPA_Data *)malloc(
-    sizeof(LADSPA_Data) * FIR_BUFFER_LENGTH
+    sizeof(LADSPA_Data) * (g_lFIRLastCoefficientIndex + 1)
   );
+  psFIRInstance->m_pfFIRBufferCurrentElement = psFIRInstance->m_pfFIRBuffer;
+  psFIRInstance->m_pfFIRBufferLidElement = psFIRInstance->m_pfFIRBuffer + g_lFIRLastCoefficientIndex + 1;
   return (LADSPA_Handle)psFIRInstance;
 }
 
@@ -39,15 +44,14 @@ void activate (
   LADSPA_Handle Instance
 ) {
   FIRInstance * psFIRInstance;
-  LADSPA_Data * pfFIRBuffer;
-  unsigned long lIndex;
+  LADSPA_Data * pfFIRBufferResetElement;
 
   psFIRInstance = (FIRInstance *)Instance;
-  psFIRInstance->lFIRBufferOffset = 0;
-  pfFIRBuffer = psFIRInstance->m_pfFIRBuffer;
-  for (lIndex = 0; lIndex < FIR_BUFFER_LENGTH; lIndex++) {
-    *(pfFIRBuffer++) = 0;
-  }
+  for (
+    pfFIRBufferResetElement = psFIRInstance->m_pfFIRBuffer;
+    pfFIRBufferResetElement < psFIRInstance->m_pfFIRBufferLidElement;
+    *(pfFIRBufferResetElement++) = 0
+  );
 }
 
 void connect_port (
@@ -76,7 +80,6 @@ void run (
   LADSPA_Data * pfOutput;
   FIRInstance * psFIRInstance;
   unsigned long lCoefficientIndex;
-  unsigned long lJumpIndex;
 
   psFIRInstance = (FIRInstance *)Instance;
   pfInput = psFIRInstance->m_pfInputBuffer;
@@ -85,20 +88,19 @@ void run (
     pfOutput < psFIRInstance->m_pfOutputBuffer + SampleCount;
     pfOutput++
   ) {
-    lJumpIndex = psFIRInstance->lFIRBufferOffset;
-    *(psFIRInstance->m_pfFIRBuffer + lJumpIndex++) = *(pfInput++);
     *(pfOutput) = 0;
+    *(psFIRInstance->m_pfFIRBufferCurrentElement) = *(pfInput++);
+    if (++psFIRInstance->m_pfFIRBufferCurrentElement == psFIRInstance->m_pfFIRBufferLidElement)
+      psFIRInstance->m_pfFIRBufferCurrentElement = psFIRInstance->m_pfFIRBuffer;
     for(
-      lCoefficientIndex = FIR_FILTER_LENGTH - 1;
+      lCoefficientIndex = g_lFIRLastCoefficientIndex;
       lCoefficientIndex + 1 > 0;
       lCoefficientIndex--
     ) {
-      *(pfOutput) += *(psFIRInstance->m_pfFIRBuffer + lJumpIndex) * FIRCoefficients[lCoefficientIndex];
-      lJumpIndex += FIROmmitRatio;
-      lJumpIndex %= FIR_BUFFER_LENGTH;
+      *(pfOutput) += *(psFIRInstance->m_pfFIRBufferCurrentElement) * FIRCoefficients[lCoefficientIndex];
+      if (++psFIRInstance->m_pfFIRBufferCurrentElement == psFIRInstance->m_pfFIRBufferLidElement)
+        psFIRInstance->m_pfFIRBufferCurrentElement = psFIRInstance->m_pfFIRBuffer;
     }
-    psFIRInstance->lFIRBufferOffset++;
-    psFIRInstance->lFIRBufferOffset %= FIR_BUFFER_LENGTH;
   }
 }
 
@@ -109,8 +111,6 @@ void cleanup(LADSPA_Handle Instance) {
   free((LADSPA_Data *)psFIRInstance->m_pfFIRBuffer);
   free(Instance);
 }
-
-LADSPA_Descriptor * g_psFIRDescriptor = NULL;
 
 void _init() {
   char ** pcPortNames;
@@ -144,6 +144,7 @@ void _init() {
   g_psFIRDescriptor->set_run_adding_gain = NULL;
   g_psFIRDescriptor->deactivate = NULL;
   g_psFIRDescriptor->cleanup = cleanup;
+  g_lFIRLastCoefficientIndex = sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]) - 1;
 }
 
 void _fini() {

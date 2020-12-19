@@ -4,8 +4,6 @@
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
 
-const unsigned long FIROmmitRatio = 1;
-
 const float FIRCoefficients[] = {
     -0.000197,
     -1.208879E-6,
