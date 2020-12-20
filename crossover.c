@@ -6,7 +6,7 @@
 #define QUOTE(x) STATIC_QUOTE(x)
 
 #ifndef FIR_HEADER
-#define FIR_HEADER example.h
+#define FIR_HEADER example/3band.h
 #endif
 
 #include QUOTE(FIR_HEADER)
@@ -14,7 +14,8 @@
 #define FIR_INPUT_PORT 0
 #define FIR_OUTPUT_PORT 1
 
-unsigned long g_lFIRLastCoefficientIndex = 0;
+unsigned long g_lOutputPortCount = 0;
+unsigned long g_lHistoryBufferLength = 0;
 LADSPA_Descriptor * g_psFIRDescriptor = NULL;
 
 typedef struct {
@@ -144,7 +145,6 @@ void _init() {
   g_psFIRDescriptor->set_run_adding_gain = NULL;
   g_psFIRDescriptor->deactivate = NULL;
   g_psFIRDescriptor->cleanup = cleanup;
-  g_lFIRLastCoefficientIndex = sizeof(FIRCoefficients) / sizeof(FIRCoefficients[0]) - 1;
 }
 
 void _fini() {
