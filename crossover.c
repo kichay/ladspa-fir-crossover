@@ -12,10 +12,11 @@
 #include QUOTE(FIR_HEADER)
 
 LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
+unsigned int g_lOutputBandCount = 0;
+unsigned long g_lHistoryBufferLength = 0;
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
-  unsigned int m_lOutputBandCount;
   LADSPA_Data ** m_p2pfOutputBuffer;
   LADSPA_Data * m_pfHistoryBuffer;
   LADSPA_Data * m_pfHistoryBufferCurrentElement;
@@ -28,32 +29,31 @@ LADSPA_Handle instantiate (
 ) {
   CrossoverInstance * psCrossoverInstance;
   unsigned long lBandIndex;
-  unsigned long lHistoryBufferLength = 0;
 
   psCrossoverInstance = (CrossoverInstance *)malloc(sizeof(CrossoverInstance));
   psCrossoverInstance->m_pfHistoryBuffer = (LADSPA_Data *)malloc(
-    sizeof(LADSPA_Data) * (lHistoryBufferLength)
+    sizeof(LADSPA_Data) * (g_lHistoryBufferLength)
   );
-  psCrossoverInstance->m_pfHistoryBufferCurrentElement = psCrossoverInstance->m_pfHistoryBuffer;
+  psCrossoverInstance->m_pfHistoryBufferCurrentElement =
+    psCrossoverInstance->m_pfHistoryBuffer;
   psCrossoverInstance->m_pfHistoryBufferLidElement =
-    psCrossoverInstance->m_pfInputBuffer + lHistoryBufferLength;
+    psCrossoverInstance->m_pfInputBuffer + g_lHistoryBufferLength;
   for (
     lBandIndex = 0;
-    lBandIndex < psCrossoverInstance->m_lOutputBandCount;
+    lBandIndex < g_lOutputBandCount;
     lBandIndex++
   ) {
     if (
-      lHistoryBufferLength <
+      g_lHistoryBufferLength <
       Crossover[lBandIndex].BandAdditionalDelay +
-      Crossover[lBandIndex].BandFIRCoefficientsLength
+        Crossover[lBandIndex].BandFIRCoefficientsLength
     ) {
-      lHistoryBufferLength = Crossover[lBandIndex].BandAdditionalDelay +
-      Crossover[lBandIndex].BandFIRCoefficientsLength;
+      g_lHistoryBufferLength = Crossover[lBandIndex].BandAdditionalDelay +
+        Crossover[lBandIndex].BandFIRCoefficientsLength;
     }
   }
-  psCrossoverInstance->m_lOutputBandCount = sizeof(Crossover) / sizeof(Crossover[0]);
   psCrossoverInstance->m_p2pfOutputBuffer = (LADSPA_Data **)malloc(
-    sizeof(LADSPA_Data *) * psCrossoverInstance->m_lOutputBandCount
+    sizeof(LADSPA_Data *) * g_lOutputBandCount
   );
   return (LADSPA_Handle)psCrossoverInstance;
 }
@@ -81,7 +81,7 @@ void connect_port (
   psCrossoverInstance = (CrossoverInstance *)Instance;
   if (Port == 0) {
     psCrossoverInstance->m_pfInputBuffer = DataLocation;
-  } else if (0 < Port && Port <= psCrossoverInstance->m_lOutputBandCount) {
+  } else if (0 < Port && Port <= g_lOutputBandCount) {
     *(psCrossoverInstance->m_p2pfOutputBuffer + Port - 1) = DataLocation;
   }
 }
@@ -90,34 +90,32 @@ void run (
   LADSPA_Handle Instance,
   unsigned long SampleCount
 ) {
-/*
   LADSPA_Data * pfInput;
   LADSPA_Data * pfOutput;
-  FIRInstance * psFIRInstance;
-  unsigned long lCoefficientIndex;
+  CrossoverInstance * psCrossoverInstance;
+  unsigned long lBandIndex;
+  unsigned long lSampleIndex;
 
-  psFIRInstance = (FIRInstance *)Instance;
-  pfInput = psFIRInstance->m_pfInputBuffer;
+  psCrossoverInstance = (CrossoverInstance *)Instance;
   for (
-    pfOutput = psFIRInstance->m_pfOutputBuffer;
-    pfOutput < psFIRInstance->m_pfOutputBuffer + SampleCount;
-    pfOutput++
+    lSampleIndex = 0;
+    lSampleIndex < SampleCount;
+    SampleCount++
   ) {
-    *(pfOutput) = 0;
-    *(psFIRInstance->m_pfFIRBufferCurrentElement) = *(pfInput++);
-    if (++psFIRInstance->m_pfFIRBufferCurrentElement == psFIRInstance->m_pfFIRBufferLidElement)
-      psFIRInstance->m_pfFIRBufferCurrentElement = psFIRInstance->m_pfFIRBuffer;
-    for(
-      lCoefficientIndex = g_lFIRLastCoefficientIndex;
-      lCoefficientIndex + 1 > 0;
-      lCoefficientIndex--
+    pfInput = psCrossoverInstance->m_pfHistoryBuffer + lSampleIndex;
+    *(psCrossoverInstance->m_pfHistoryBufferCurrentElement) = *(pfInput);
+    for (lBandIndex = 0; lBandIndex < g_lOutputBandCount; lBandIndex++) {
+      pfOutput = *(psCrossoverInstance->m_p2pfOutputBuffer + lBandIndex) + lSampleIndex;
+      *(pfOutput) = *(pfInput);
+    }
+    if (
+      ++psCrossoverInstance->m_pfHistoryBufferCurrentElement ==
+        psCrossoverInstance->m_pfHistoryBufferLidElement
     ) {
-      *(pfOutput) += *(psFIRInstance->m_pfFIRBufferCurrentElement) * FIRCoefficients[lCoefficientIndex];
-      if (++psFIRInstance->m_pfFIRBufferCurrentElement == psFIRInstance->m_pfFIRBufferLidElement)
-        psFIRInstance->m_pfFIRBufferCurrentElement = psFIRInstance->m_pfFIRBuffer;
+      psCrossoverInstance->m_pfHistoryBufferCurrentElement =
+        psCrossoverInstance->m_pfHistoryBuffer;
     }
   }
-*/
 }
 
 void cleanup(LADSPA_Handle Instance) {
@@ -134,6 +132,8 @@ void _init() {
   unsigned long lPortIndex;
   LADSPA_PortDescriptor * piPortDescriptors;
   LADSPA_PortRangeHint * psPortRangeHints;
+
+  g_lOutputBandCount = sizeof(Crossover) / sizeof(Crossover[0]);
   g_psCrossoverDescriptor = (LADSPA_Descriptor *)malloc(sizeof(LADSPA_Descriptor));
   g_psCrossoverDescriptor->UniqueID = PLUGIN_ID;
   g_psCrossoverDescriptor->Label = strdup(PLUGIN_LABEL);
