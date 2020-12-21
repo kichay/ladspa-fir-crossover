@@ -11,7 +11,7 @@
 
 #include QUOTE(FIR_HEADER)
 
-LADSPA_Descriptor * g_psFIRDescriptor = NULL;
+LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
@@ -134,71 +134,68 @@ void _init() {
   unsigned long lPortIndex;
   LADSPA_PortDescriptor * piPortDescriptors;
   LADSPA_PortRangeHint * psPortRangeHints;
-  g_psFIRDescriptor = (LADSPA_Descriptor *)malloc(sizeof(LADSPA_Descriptor));
-  g_psFIRDescriptor->UniqueID = PLUGIN_ID;
-  g_psFIRDescriptor->Label = strdup(PLUGIN_LABEL);
-  g_psFIRDescriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
-  g_psFIRDescriptor->Name  = strdup(PLUGIN_NAME);
-  g_psFIRDescriptor->Maker = strdup(PLUGIN_MAKER);
-  g_psFIRDescriptor->Copyright = strdup(PLUGIN_COPYRIGHT);
-  g_psFIRDescriptor->PortCount = sizeof(Crossover) / sizeof(Crossover[0]) + 1;
+  g_psCrossoverDescriptor = (LADSPA_Descriptor *)malloc(sizeof(LADSPA_Descriptor));
+  g_psCrossoverDescriptor->UniqueID = PLUGIN_ID;
+  g_psCrossoverDescriptor->Label = strdup(PLUGIN_LABEL);
+  g_psCrossoverDescriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
+  g_psCrossoverDescriptor->Name  = strdup(PLUGIN_NAME);
+  g_psCrossoverDescriptor->Maker = strdup(PLUGIN_MAKER);
+  g_psCrossoverDescriptor->Copyright = strdup(PLUGIN_COPYRIGHT);
+  g_psCrossoverDescriptor->PortCount = sizeof(Crossover) / sizeof(Crossover[0]) + 1;
   piPortDescriptors = (LADSPA_PortDescriptor *)calloc(
-    g_psFIRDescriptor->PortCount,
+    g_psCrossoverDescriptor->PortCount,
     sizeof(LADSPA_PortDescriptor)
   );
-  g_psFIRDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
-  pcPortNames = (char **)calloc(g_psFIRDescriptor->PortCount, sizeof(char *));
-  g_psFIRDescriptor->PortNames = (const char **)pcPortNames;
+  g_psCrossoverDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
+  pcPortNames = (char **)calloc(g_psCrossoverDescriptor->PortCount, sizeof(char *));
+  g_psCrossoverDescriptor->PortNames = (const char **)pcPortNames;
   psPortRangeHints = (LADSPA_PortRangeHint *)calloc(
-    g_psFIRDescriptor->PortCount,
+    g_psCrossoverDescriptor->PortCount,
     sizeof(LADSPA_PortRangeHint)
   );
-  g_psFIRDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
+  g_psCrossoverDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
   for(
     lPortIndex = 0;
-    lPortIndex < g_psFIRDescriptor->PortCount;
+    lPortIndex < g_psCrossoverDescriptor->PortCount;
     lPortIndex++
   ) {
     if (lPortIndex == 0) {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = strdup(PLUGIN_INPUT);
+      pcPortNames[lPortIndex] = CrossoverInputPortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     } else {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = strdup(Crossover[lPortIndex].PortName);
+      pcPortNames[lPortIndex] = Crossover[lPortIndex - 1].PortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     }
   }
-  g_psFIRDescriptor->instantiate = instantiate;
-  g_psFIRDescriptor->connect_port = connect_port;
-  g_psFIRDescriptor->activate = activate;
-  g_psFIRDescriptor->run = run;
-  g_psFIRDescriptor->run_adding = NULL;
-  g_psFIRDescriptor->set_run_adding_gain = NULL;
-  g_psFIRDescriptor->deactivate = NULL;
-  g_psFIRDescriptor->cleanup = cleanup;
+  g_psCrossoverDescriptor->instantiate = instantiate;
+  g_psCrossoverDescriptor->connect_port = connect_port;
+  g_psCrossoverDescriptor->activate = activate;
+  g_psCrossoverDescriptor->run = run;
+  g_psCrossoverDescriptor->run_adding = NULL;
+  g_psCrossoverDescriptor->set_run_adding_gain = NULL;
+  g_psCrossoverDescriptor->deactivate = NULL;
+  g_psCrossoverDescriptor->cleanup = cleanup;
 }
 
 void _fini() {
-  unsigned long lIndex;
-  if (g_psFIRDescriptor) {
-    free((char *)g_psFIRDescriptor->Label);
-    free((char *)g_psFIRDescriptor->Name);
-    free((char *)g_psFIRDescriptor->Maker);
-    free((char *)g_psFIRDescriptor->Copyright);
-    free((LADSPA_PortDescriptor *)g_psFIRDescriptor->PortDescriptors);
-    for (lIndex = 0; lIndex < g_psFIRDescriptor->PortCount; lIndex++)
-      free((char *)(g_psFIRDescriptor->PortNames[lIndex]));
-    free((char **)g_psFIRDescriptor->PortNames);
-    free((LADSPA_PortRangeHint *)g_psFIRDescriptor->PortRangeHints);
-    free(g_psFIRDescriptor);
+  if (g_psCrossoverDescriptor) {
+    free((char *)g_psCrossoverDescriptor->Label);
+    free((char *)g_psCrossoverDescriptor->Name);
+    free((char *)g_psCrossoverDescriptor->Maker);
+    free((char *)g_psCrossoverDescriptor->Copyright);
+    free((LADSPA_PortDescriptor *)g_psCrossoverDescriptor->PortDescriptors);
+    free((char **)g_psCrossoverDescriptor->PortNames);
+    free((LADSPA_PortRangeHint *)g_psCrossoverDescriptor->PortRangeHints);
+    free(g_psCrossoverDescriptor);
   }
 }
 
 const LADSPA_Descriptor * ladspa_descriptor(unsigned long Index) {
   switch (Index) {
     case 0:
-      return g_psFIRDescriptor;
+      return g_psCrossoverDescriptor;
     default:
       return NULL;
   }
