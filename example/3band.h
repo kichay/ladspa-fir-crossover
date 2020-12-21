@@ -3,11 +3,13 @@
 #define PLUGIN_NAME "FIR Crossover"
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
+#define PLUGIN_INPUT "Input"
 
 typedef struct {
   const unsigned long BandAdditionalDelay;
-  const unsigned long BandFIRCoefficientsCount;
+  const unsigned long BandFIRCoefficientsLength;
   const float * BandFIRCoefficients;
+  const char * PortName;
 } CrossoverBand;
 
 const float Lowpass[] = {
@@ -49,8 +51,8 @@ const float Highpass[] = {
   0.1,
 };
 
-CrossoverBand Crossover[] = {
-  {0, 10, Lowpass},
-  {0, 10, Bandpass},
-  {0, 10, Highpass},
+const CrossoverBand Crossover[] = {
+  {0, 10, Lowpass, "Lowpass"},
+  {0, 10, Bandpass, "Bandpass"},
+  {0, 10, Highpass, "Highpass"},
 };

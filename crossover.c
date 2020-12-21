@@ -11,11 +11,6 @@
 
 #include QUOTE(FIR_HEADER)
 
-#define FIR_INPUT_PORT 0
-#define FIR_OUTPUT_PORT 1
-
-unsigned long g_lOutputPortCount = 0;
-unsigned long g_lHistoryBufferLength = 0;
 LADSPA_Descriptor * g_psFIRDescriptor = NULL;
 
 typedef struct {
@@ -25,6 +20,8 @@ typedef struct {
   LADSPA_Data * m_pfFIRBufferCurrentElement;
   LADSPA_Data * m_pfFIRBufferLidElement;
 } FIRInstance;
+
+/*
 
 LADSPA_Handle instantiate (
   const LADSPA_Descriptor * Descriptor,
@@ -113,8 +110,11 @@ void cleanup(LADSPA_Handle Instance) {
   free(Instance);
 }
 
+*/
+
 void _init() {
   char ** pcPortNames;
+  unsigned long lPortIndex;
   LADSPA_PortDescriptor * piPortDescriptors;
   LADSPA_PortRangeHint * psPortRangeHints;
   g_psFIRDescriptor = (LADSPA_Descriptor *)malloc(sizeof(LADSPA_Descriptor));
@@ -124,19 +124,35 @@ void _init() {
   g_psFIRDescriptor->Name  = strdup(PLUGIN_NAME);
   g_psFIRDescriptor->Maker = strdup(PLUGIN_MAKER);
   g_psFIRDescriptor->Copyright = strdup(PLUGIN_COPYRIGHT);
-  g_psFIRDescriptor->PortCount = 2;
-  piPortDescriptors = (LADSPA_PortDescriptor *)calloc(2, sizeof(LADSPA_PortDescriptor));
+  g_psFIRDescriptor->PortCount = sizeof(Crossover) / sizeof(Crossover[0]) + 1;
+  piPortDescriptors = (LADSPA_PortDescriptor *)calloc(
+    g_psFIRDescriptor->PortCount,
+    sizeof(LADSPA_PortDescriptor)
+  );
   g_psFIRDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
-  piPortDescriptors[FIR_INPUT_PORT] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
-  piPortDescriptors[FIR_OUTPUT_PORT] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-  pcPortNames = (char **)calloc(2, sizeof(char *));
+  pcPortNames = (char **)calloc(g_psFIRDescriptor->PortCount, sizeof(char *));
   g_psFIRDescriptor->PortNames = (const char **)pcPortNames;
-  pcPortNames[FIR_INPUT_PORT] = strdup("Input");
-  pcPortNames[FIR_OUTPUT_PORT] = strdup("Output");
-  psPortRangeHints = ((LADSPA_PortRangeHint *)calloc(2, sizeof(LADSPA_PortRangeHint)));
+  psPortRangeHints = (LADSPA_PortRangeHint *)calloc(
+    g_psFIRDescriptor->PortCount,
+    sizeof(LADSPA_PortRangeHint)
+  );
   g_psFIRDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
-  psPortRangeHints[FIR_INPUT_PORT].HintDescriptor = 0;
-  psPortRangeHints[FIR_OUTPUT_PORT].HintDescriptor = 0;
+  for(
+    lPortIndex = 0;
+    lPortIndex < g_psFIRDescriptor->PortCount;
+    lPortIndex++
+  ) {
+    if (lPortIndex == 0) {
+      piPortDescriptors[lPortIndex] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
+      pcPortNames[lPortIndex] = strdup(PLUGIN_INPUT);
+      psPortRangeHints[lPortIndex].HintDescriptor = 0;
+    } else {
+      piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
+      pcPortNames[lPortIndex] = strdup(Crossover[lPortIndex].PortName);
+      psPortRangeHints[lPortIndex].HintDescriptor = 0;
+    }
+  }
+  /*
   g_psFIRDescriptor->instantiate = instantiate;
   g_psFIRDescriptor->connect_port = connect_port;
   g_psFIRDescriptor->activate = activate;
@@ -145,6 +161,7 @@ void _init() {
   g_psFIRDescriptor->set_run_adding_gain = NULL;
   g_psFIRDescriptor->deactivate = NULL;
   g_psFIRDescriptor->cleanup = cleanup;
+  */
 }
 
 void _fini() {
