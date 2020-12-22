@@ -8,7 +8,7 @@ char * CrossoverInputPortName = "Input";
 
 typedef struct {
   unsigned long BandAdditionalDelay;
-  unsigned long BandFIRCoefficientsLength;
+  unsigned long BandFIRCoefficientsCount;
   float * BandFIRCoefficients;
   char * PortName;
 } CrossoverBand;
@@ -27,29 +27,15 @@ float Lowpass[] = {
 };
 
 float Bandpass[] = {
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
+  0.2,
+  0.2,
+  0.2,
+  0.2,
+  0.2,
 };
 
 float Highpass[] = {
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
-  0.1,
+  1,
 };
 
 CrossoverBand Crossover[] = {
