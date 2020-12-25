@@ -178,11 +178,9 @@ void _init() {
         lMaxOverallDelay = lOverallDelay;
     }
   }
-  for(
-    g_lHistoryBufferLength = 2;
-    g_lHistoryBufferLength < lMaxOverallDelay;
-    g_lHistoryBufferLength *= 2
-  );
+  g_lHistoryBufferLength = 2;
+  while(g_lHistoryBufferLength < lMaxOverallDelay)
+    g_lHistoryBufferLength *= 2;
   g_psCrossoverDescriptor->instantiate = instantiate;
   g_psCrossoverDescriptor->connect_port = connect_port;
   g_psCrossoverDescriptor->activate = activate;
