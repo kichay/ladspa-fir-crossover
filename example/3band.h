@@ -40,6 +40,6 @@ float Highpass[] = {
 
 CrossoverBand Crossover[] = {
   {0, 10, Lowpass, "Lowpass"},
-  {0, 10, Bandpass, "Bandpass"},
-  {0, 10, Highpass, "Highpass"},
+  {0, 5, Bandpass, "Bandpass"},
+  {0, 1, Highpass, "Highpass"},
 };
