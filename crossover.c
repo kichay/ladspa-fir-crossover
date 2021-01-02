@@ -36,6 +36,7 @@ LADSPA_Handle instantiate (
   CrossoverInstance * psCrossoverInstance;
   struct BufferElement * psBufferCurrent;
   struct BufferElement * psBufferBarrier;
+  unsigned long BandIndex;
 
   psCrossoverInstance = (CrossoverInstance *)malloc(sizeof(CrossoverInstance));
   psCrossoverInstance->m_p2pfOutputBuffer = (LADSPA_Data **)malloc(
@@ -44,7 +45,7 @@ LADSPA_Handle instantiate (
   psCrossoverInstance->m_psCircleBuffer = (struct BufferElement *)malloc(
     sizeof(struct BufferElement) * g_lCircleBufferLength
   );
-  for(
+  for (
     psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
       psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
     psBufferCurrent < psBufferBarrier;
@@ -53,6 +54,21 @@ LADSPA_Handle instantiate (
     psBufferCurrent->BandsAdditionalDelay = (struct BufferElement **)malloc(
       sizeof(struct BufferElement) * CrossoverData.BandsCount
     );
+    for (
+      BandIndex = 0;
+      BandIndex < CrossoverData.BandsCount;
+      BandIndex++
+    ) {
+      psBufferCurrent->BandsAdditionalDelay[BandIndex] = psBufferCurrent -
+        CrossoverData.Bands[BandIndex].AdditionalDelay;
+      if (
+        psBufferCurrent->BandsAdditionalDelay[BandIndex] <
+          psCrossoverInstance->m_psCircleBuffer
+      ) {
+        psBufferCurrent->BandsAdditionalDelay[BandIndex] +=
+          g_lCircleBufferLength;
+      }
+    }
     if (psBufferCurrent == psCrossoverInstance->m_psCircleBuffer) {
       psBufferCurrent->Previous = psBufferBarrier - 1;
       psBufferCurrent->Next = psBufferCurrent + 1;
@@ -77,7 +93,7 @@ void activate (
   struct BufferElement * psBufferBarrier;
 
   psCrossoverInstance = (CrossoverInstance *)Instance;
-  for(
+  for (
     psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
       psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
     psBufferCurrent < psBufferBarrier;
@@ -106,6 +122,7 @@ void run (
   LADSPA_Handle Instance,
   unsigned long SampleCount
 ) {
+  //
 }
 
 void cleanup(LADSPA_Handle Instance) {
@@ -114,7 +131,7 @@ void cleanup(LADSPA_Handle Instance) {
   struct BufferElement * psBufferBarrier;
 
   psCrossoverInstance = (CrossoverInstance *)Instance;
-  for(
+  for (
     psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
       psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
     psBufferCurrent < psBufferBarrier;
@@ -155,7 +172,7 @@ void _init() {
   );
   g_psCrossoverDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
   g_lCircleBufferLength = 0;
-  for(
+  for (
     lPortIndex = 0;
     lPortIndex < g_psCrossoverDescriptor->PortCount;
     lPortIndex++
@@ -166,10 +183,10 @@ void _init() {
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     } else {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = CrossoverData.Bands[lPortIndex - 1]->PortName;
+      pcPortNames[lPortIndex] = CrossoverData.Bands[lPortIndex - 1].PortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
-      lBandDelay = CrossoverData.Bands[lPortIndex - 1]->AdditionalDelay +
-          CrossoverData.Bands[lPortIndex - 1]->FIRCoefficientsCount;
+      lBandDelay = CrossoverData.Bands[lPortIndex - 1].AdditionalDelay +
+          CrossoverData.Bands[lPortIndex - 1].CoefficientsCount;
       if (lBandDelay > g_lCircleBufferLength)
         g_lCircleBufferLength = lBandDelay;
     }

@@ -4,7 +4,7 @@
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
 
-float LowpassFIRCoefficients[] = {
+float LowpassCoefficients[] = {
   0.1,
   0.1,
   0.1,
@@ -17,7 +17,7 @@ float LowpassFIRCoefficients[] = {
   0.1,
 };
 
-float BandpassFIRCoefficients[] = {
+float BandpassCoefficients[] = {
   0.2,
   0.2,
   0.2,
@@ -25,14 +25,14 @@ float BandpassFIRCoefficients[] = {
   0.2,
 };
 
-float HighpassFIRCoefficients[] = {
+float HighpassCoefficients[] = {
   1,
 };
 
-Band Lowpass = {0, 10, LowpassFIRCoefficients, "Lowpass"};
-Band Bandpass = {0, 5, BandpassFIRCoefficients, "Bandpass"};
-Band Highpass = {0, 1, HighpassFIRCoefficients, "Highpass"};
-
-Band * Bands[] = {&Lowpass, &Bandpass, &Highpass};
+Band Bands[] = {
+  {0, 10, LowpassCoefficients, "Lowpass"},
+  {0, 5, BandpassCoefficients, "Bandpass"},
+  {0, 1, HighpassCoefficients, "Highpass"},
+};
 
 Crossover CrossoverData = {"Input", 3, Bands};

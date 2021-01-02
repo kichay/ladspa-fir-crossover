@@ -1,12 +1,12 @@
 typedef struct {
   unsigned long AdditionalDelay;
-  unsigned long FIRCoefficientsCount;
-  float * FIRCoefficients;
+  unsigned long CoefficientsCount;
+  float * Coefficients;
   char * PortName;
 } Band;
 
 typedef struct {
   char * InputPortName;
   unsigned long BandsCount;
-  Band ** Bands;
+  Band * Bands;
 } Crossover;
