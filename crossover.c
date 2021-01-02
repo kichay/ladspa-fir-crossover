@@ -2,14 +2,16 @@
 #include <string.h>
 #include <ladspa.h>
 
+#include "crossover.h"
+
 #define STATIC_QUOTE(x) #x
 #define QUOTE(x) STATIC_QUOTE(x)
 
 #ifndef FIR_HEADER
-#define FIR_HEADER example/3band.h
-#endif
-
+#include "example/3band.h"
+#else
 #include QUOTE(FIR_HEADER)
+#endif
 
 LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
 unsigned long g_lCircleBufferLength = 0;
@@ -164,10 +166,10 @@ void _init() {
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     } else {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = CrossoverData.BandsPointer[lPortIndex - 1]->PortName;
+      pcPortNames[lPortIndex] = CrossoverData.Bands[lPortIndex - 1]->PortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
-      lBandDelay = CrossoverData.BandsPointer[lPortIndex - 1]->AdditionalDelay +
-          CrossoverData.BandsPointer[lPortIndex - 1]->FIRCoefficientsCount;
+      lBandDelay = CrossoverData.Bands[lPortIndex - 1]->AdditionalDelay +
+          CrossoverData.Bands[lPortIndex - 1]->FIRCoefficientsCount;
       if (lBandDelay > g_lCircleBufferLength)
         g_lCircleBufferLength = lBandDelay;
     }
