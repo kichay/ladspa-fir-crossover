@@ -13,9 +13,6 @@
 #include QUOTE(FIR_HEADER)
 #endif
 
-LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
-unsigned long g_lCircleBufferLength = 0;
-
 typedef struct BufferElement {
   LADSPA_Data Value;
   struct BufferElement * Previous;
@@ -27,7 +24,11 @@ typedef struct {
   LADSPA_Data * m_pfInputBuffer;
   LADSPA_Data ** m_p2pfOutputBuffer;
   struct BufferElement * m_psCircleBuffer;
+  struct BufferElement * m_psEntrypoint;
 } CrossoverInstance;
+
+LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
+unsigned long g_lCircleBufferLength = 0;
 
 LADSPA_Handle instantiate (
   const LADSPA_Descriptor * Descriptor,
@@ -82,6 +83,7 @@ LADSPA_Handle instantiate (
     psBufferCurrent->Next = psBufferCurrent + 1;
     psBufferCurrent->Previous = psBufferCurrent - 1;
   }
+  psCrossoverInstance->m_psEntrypoint = psCrossoverInstance->m_psCircleBuffer;
   return (LADSPA_Handle)psCrossoverInstance;
 }
 
@@ -122,7 +124,21 @@ void run (
   LADSPA_Handle Instance,
   unsigned long SampleCount
 ) {
-  //
+  CrossoverInstance * psCrossoverInstance;
+  LADSPA_Data * pfInput;
+  LADSPA_Data * pfInputBarrier;
+
+  psCrossoverInstance = (CrossoverInstance *)Instance;
+  for (
+    pfInput = psCrossoverInstance->m_pfInputBuffer,
+      pfInputBarrier = psCrossoverInstance->m_pfInputBuffer + SampleCount;
+    pfInput < pfInputBarrier;
+    pfInput++
+  ) {
+    psCrossoverInstance->m_psEntrypoint->Value = *(pfInput);
+    //
+    psCrossoverInstance->m_psEntrypoint = psCrossoverInstance->m_psEntrypoint->Next;
+  }
 }
 
 void cleanup(LADSPA_Handle Instance) {
