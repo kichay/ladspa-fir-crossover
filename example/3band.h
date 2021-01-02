@@ -45,5 +45,7 @@ float HighpassFIRCoefficients[] = {
 Band LowpassBand = {0, 10, LowpassFIRCoefficients, "Lowpass"};
 Band BandpassBand = {0, 5, BandpassFIRCoefficients, "Bandpass"};
 Band HighpassBand = {0, 1, HighpassFIRCoefficients, "Highpass"};
+
 Band * Bands[] = {&LowpassBand, &BandpassBand, &HighpassBand};
+
 Crossover CrossoverData = {"Input", 3, Bands};

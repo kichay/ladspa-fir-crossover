@@ -15,6 +15,7 @@ LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
 unsigned long g_lCircleBufferLength = 0;
 
 typedef struct BufferElement {
+  LADSPA_Data Value;
   struct BufferElement * Previous;
   struct BufferElement * Next;
   struct BufferElement ** BandsAdditionalDelayPonter2Pointer;
@@ -69,7 +70,19 @@ LADSPA_Handle instantiate (
 void activate (
   LADSPA_Handle Instance
 ) {
-  //CrossoverInstance * psCrossoverInstance;
+  CrossoverInstance * psCrossoverInstance;
+  struct BufferElement * psBufferCurrent;
+  struct BufferElement * psBufferBarrier;
+
+  psCrossoverInstance = (CrossoverInstance *)Instance;
+  for(
+    psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
+      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
+    psBufferCurrent < psBufferBarrier;
+    psBufferCurrent++
+  ) {
+    psBufferCurrent->Value = 0;
+  }
 }
 
 void connect_port (
