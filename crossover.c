@@ -95,8 +95,19 @@ void run (
 
 void cleanup(LADSPA_Handle Instance) {
   CrossoverInstance * psCrossoverInstance;
+  struct BufferElement * psBufferCurrent;
+  struct BufferElement * psBufferBarrier;
 
   psCrossoverInstance = (CrossoverInstance *)Instance;
+  for(
+    psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
+      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
+    psBufferCurrent < psBufferBarrier;
+    psBufferCurrent++
+  ) {
+    free((struct BufferElement **)psBufferCurrent->BandsAdditionalDelayPonter2Pointer);
+  }
+  free((struct BufferElement *)psCrossoverInstance->m_psCircleBuffer);
   free((LADSPA_Data **)psCrossoverInstance->m_p2pfOutputBuffer);
   free(Instance);
 }
