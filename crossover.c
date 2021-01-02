@@ -18,7 +18,7 @@ typedef struct BufferElement {
   LADSPA_Data Value;
   struct BufferElement * Previous;
   struct BufferElement * Next;
-  struct BufferElement ** BandsAdditionalDelayPonter2Pointer;
+  struct BufferElement ** BandsAdditionalDelay;
 } BufferElement;
 
 typedef struct {
@@ -48,7 +48,7 @@ LADSPA_Handle instantiate (
     psBufferCurrent < psBufferBarrier;
     psBufferCurrent++
   ) {
-    psBufferCurrent->BandsAdditionalDelayPonter2Pointer = (struct BufferElement **)malloc(
+    psBufferCurrent->BandsAdditionalDelay = (struct BufferElement **)malloc(
       sizeof(struct BufferElement) * CrossoverData.BandsCount
     );
     if (psBufferCurrent == psCrossoverInstance->m_psCircleBuffer) {
@@ -118,7 +118,7 @@ void cleanup(LADSPA_Handle Instance) {
     psBufferCurrent < psBufferBarrier;
     psBufferCurrent++
   ) {
-    free((struct BufferElement **)psBufferCurrent->BandsAdditionalDelayPonter2Pointer);
+    free((struct BufferElement **)psBufferCurrent->BandsAdditionalDelay);
   }
   free((struct BufferElement *)psCrossoverInstance->m_psCircleBuffer);
   free((LADSPA_Data **)psCrossoverInstance->m_p2pfOutputBuffer);
