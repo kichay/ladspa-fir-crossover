@@ -131,7 +131,7 @@ void run (
   psCrossoverInstance = (CrossoverInstance *)Instance;
   for (
     pfInput = psCrossoverInstance->m_pfInputBuffer,
-      pfInputBarrier = psCrossoverInstance->m_pfInputBuffer + SampleCount;
+      pfInputBarrier = pfInput + SampleCount;
     pfInput < pfInputBarrier;
     pfInput++
   ) {
