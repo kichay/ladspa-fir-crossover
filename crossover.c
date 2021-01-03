@@ -5,10 +5,10 @@
 #define STATIC_QUOTE(x) #x
 #define QUOTE(x) STATIC_QUOTE(x)
 
-#ifndef FIR_HEADER
+#ifndef CROSSOVER_HEADER
 #include "example/3band.h"
 #else
-#include QUOTE(FIR_HEADER)
+#include QUOTE(CROSSOVER_HEADER)
 #endif
 
 #define CROSSOVER_BAND_COUNT (PLUGIN_PORT_COUNT - 1)
