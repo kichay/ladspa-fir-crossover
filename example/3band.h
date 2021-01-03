@@ -4,16 +4,7 @@
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
 
-char * CrossoverInputPortName = "Input";
-
-typedef struct {
-  unsigned long BandAdditionalDelay;
-  unsigned long BandFIRCoefficientsCount;
-  float * BandFIRCoefficients;
-  char * PortName;
-} CrossoverBand;
-
-float Lowpass[] = {
+float LowpassCoefficients[] = {
   0.1,
   0.1,
   0.1,
@@ -26,7 +17,7 @@ float Lowpass[] = {
   0.1,
 };
 
-float Bandpass[] = {
+float BandpassCoefficients[] = {
   0.2,
   0.2,
   0.2,
@@ -34,12 +25,14 @@ float Bandpass[] = {
   0.2,
 };
 
-float Highpass[] = {
+float HighpassCoefficients[] = {
   1,
 };
 
-CrossoverBand Crossover[] = {
-  {0, 10, Lowpass, "Lowpass"},
-  {0, 5, Bandpass, "Bandpass"},
-  {0, 1, Highpass, "Highpass"},
+Band Bands[] = {
+  {0, 10, LowpassCoefficients, "Lowpass"},
+  {3, 5, BandpassCoefficients, "Bandpass"},
+  {5, 1, HighpassCoefficients, "Highpass"},
 };
+
+Crossover CrossoverData = {"Input", 3, Bands};
