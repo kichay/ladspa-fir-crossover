@@ -116,7 +116,7 @@ void connect_port (
   if (Port == 0) {
     psCrossoverInstance->m_pfInputBuffer = DataLocation;
   } else if (0 < Port && Port <= CrossoverData.BandsCount) {
-    *(psCrossoverInstance->m_p2pfOutputBuffer + Port - 1) = DataLocation;
+    psCrossoverInstance->m_p2pfOutputBuffer[Port - 1] = DataLocation;
   }
 }
 
@@ -125,18 +125,40 @@ void run (
   unsigned long SampleCount
 ) {
   CrossoverInstance * psCrossoverInstance;
-  LADSPA_Data * pfInput;
-  LADSPA_Data * pfInputBarrier;
+  unsigned long lSampleIndex;
+  unsigned long lBandIndex;
+  unsigned long lCoefficientIndex;
+  LADSPA_Data Accumulator;
+  struct BufferElement * psBufferCurrent;
 
   psCrossoverInstance = (CrossoverInstance *)Instance;
   for (
-    pfInput = psCrossoverInstance->m_pfInputBuffer,
-      pfInputBarrier = pfInput + SampleCount;
-    pfInput < pfInputBarrier;
-    pfInput++
+    lSampleIndex = 0;
+    lSampleIndex < SampleCount;
+    lSampleIndex++
   ) {
-    psCrossoverInstance->m_psEntrypoint->Value = *(pfInput);
-    //
+    psCrossoverInstance->m_psEntrypoint->Value =
+      psCrossoverInstance->m_pfInputBuffer[lSampleIndex];
+    for (
+      lBandIndex = 0;
+      lBandIndex < CrossoverData.BandsCount;
+      lBandIndex++
+    ) {
+      Accumulator = 0;
+      psBufferCurrent =
+        psCrossoverInstance->m_psEntrypoint->BandsAdditionalDelay[lBandIndex];
+      for (
+        lCoefficientIndex = 0;
+        lCoefficientIndex < CrossoverData.Bands[lBandIndex].CoefficientsCount;
+        lCoefficientIndex++
+      ) {
+        Accumulator += psBufferCurrent->Value *
+          CrossoverData.Bands[lBandIndex].Coefficients[lCoefficientIndex];
+        psBufferCurrent = psBufferCurrent->Previous;
+      }
+      psCrossoverInstance->m_p2pfOutputBuffer[lBandIndex][lSampleIndex] =
+        Accumulator;
+    }
     psCrossoverInstance->m_psEntrypoint = psCrossoverInstance->m_psEntrypoint->Next;
   }
 }
@@ -199,7 +221,7 @@ void _init() {
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     } else {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = CrossoverData.Bands[lPortIndex - 1].PortName;
+      pcPortNames[lPortIndex] = CrossoverData.Bands[lPortIndex - 1].OutputPortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
       lBandDelay = CrossoverData.Bands[lPortIndex - 1].AdditionalDelay +
           CrossoverData.Bands[lPortIndex - 1].CoefficientsCount;

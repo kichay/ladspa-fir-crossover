@@ -2,7 +2,7 @@ typedef struct {
   unsigned long AdditionalDelay;
   unsigned long CoefficientsCount;
   float * Coefficients;
-  char * PortName;
+  char * OutputPortName;
 } Band;
 
 typedef struct {

@@ -31,8 +31,8 @@ float HighpassCoefficients[] = {
 
 Band Bands[] = {
   {0, 10, LowpassCoefficients, "Lowpass"},
-  {0, 5, BandpassCoefficients, "Bandpass"},
-  {0, 1, HighpassCoefficients, "Highpass"},
+  {3, 5, BandpassCoefficients, "Bandpass"},
+  {5, 1, HighpassCoefficients, "Highpass"},
 };
 
 Crossover CrossoverData = {"Input", 3, Bands};
