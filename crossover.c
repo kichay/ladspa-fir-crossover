@@ -182,21 +182,21 @@ void _init() {
   g_psCrossoverDescriptor->Copyright = strdup(PLUGIN_COPYRIGHT);
   g_psCrossoverDescriptor->PortCount = PLUGIN_PORT_COUNT;
   piPortDescriptors = (LADSPA_PortDescriptor *)calloc(
-    g_psCrossoverDescriptor->PortCount,
+    PLUGIN_PORT_COUNT,
     sizeof(LADSPA_PortDescriptor)
   );
   g_psCrossoverDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
-  pcPortNames = (char **)calloc(g_psCrossoverDescriptor->PortCount, sizeof(char *));
+  pcPortNames = (char **)calloc(PLUGIN_PORT_COUNT, sizeof(char *));
   g_psCrossoverDescriptor->PortNames = (const char **)pcPortNames;
   psPortRangeHints = (LADSPA_PortRangeHint *)calloc(
-    g_psCrossoverDescriptor->PortCount,
+    PLUGIN_PORT_COUNT,
     sizeof(LADSPA_PortRangeHint)
   );
   g_psCrossoverDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
   g_lCircleBufferLength = 0;
   for (
     lPortIndex = 0;
-    lPortIndex < g_psCrossoverDescriptor->PortCount;
+    lPortIndex < PLUGIN_PORT_COUNT;
     lPortIndex++
   ) {
     if (lPortIndex == 0) {
