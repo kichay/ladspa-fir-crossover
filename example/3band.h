@@ -3,9 +3,8 @@
 #define PLUGIN_NAME "FIR Crossover"
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
-#define PLUGIN_PORT_COUNT 4
-
-char * CrossoverInputPortName = "Input";
+#define PLUGIN_INPUT_PORT_NAME "Input"
+#define PLUGIN_PORT_COUNT 4 // (Input, Lowpass, Bandpass, Highpass)
 
 typedef struct {
   unsigned long AdditionalDelay;

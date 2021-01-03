@@ -29,6 +29,7 @@ typedef struct {
 
 LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
 unsigned long g_lCircleBufferLength = 0;
+char * g_pcCrossoverInputPortName = PLUGIN_INPUT_PORT_NAME;
 
 LADSPA_Handle instantiate (
   const LADSPA_Descriptor * Descriptor,
@@ -200,7 +201,7 @@ void _init() {
   ) {
     if (lPortIndex == 0) {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = CrossoverInputPortName;
+      pcPortNames[lPortIndex] = g_pcCrossoverInputPortName;
       psPortRangeHints[lPortIndex].HintDescriptor = 0;
     } else {
       piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
