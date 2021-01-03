@@ -3,8 +3,18 @@
 #define PLUGIN_NAME "FIR Crossover"
 #define PLUGIN_MAKER "Danil Kichay"
 #define PLUGIN_COPYRIGHT "None"
+#define PLUGIN_PORT_COUNT 4
 
-float LowpassCoefficients[] = {
+char * CrossoverInputPortName = "Input";
+
+typedef struct {
+  unsigned long AdditionalDelay;
+  unsigned long CoefficientsCount;
+  float * Coefficients;
+  char * OutputPortName;
+} Band;
+
+float Lowpass[] = {
   0.1,
   0.1,
   0.1,
@@ -17,7 +27,7 @@ float LowpassCoefficients[] = {
   0.1,
 };
 
-float BandpassCoefficients[] = {
+float Bandpass[] = {
   0.2,
   0.2,
   0.2,
@@ -25,14 +35,12 @@ float BandpassCoefficients[] = {
   0.2,
 };
 
-float HighpassCoefficients[] = {
+float Highpass[] = {
   1,
 };
 
-Band Bands[] = {
-  {0, 10, LowpassCoefficients, "Lowpass"},
-  {3, 5, BandpassCoefficients, "Bandpass"},
-  {5, 1, HighpassCoefficients, "Highpass"},
+Band Crossover[] = {
+  {0, 10, Lowpass, "Lowpass"},
+  {3, 5, Bandpass, "Bandpass"},
+  {5, 1, Highpass, "Highpass"},
 };
-
-Crossover CrossoverData = {"Input", 3, Bands};
