@@ -6,3 +6,4 @@
 ### Dependencies:
 - GNU toolchain (make, gcc, ld)
 - LADSPA SDK (ladspa.h)
+- libboost preprocessing library

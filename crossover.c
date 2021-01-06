@@ -1,35 +1,29 @@
 #include <stdlib.h>
-#include <string.h>
 #include <ladspa.h>
-
-#define STATIC_QUOTE(x) #x
-#define QUOTE(x) STATIC_QUOTE(x)
 
 #ifndef CROSSOVER_HEADER
 #include "example/3band.h"
 #else
+#define STATIC_QUOTE(x) #x
+#define QUOTE(x) STATIC_QUOTE(x)
 #include QUOTE(CROSSOVER_HEADER)
 #endif
 
-#define CROSSOVER_BAND_COUNT (PLUGIN_PORT_COUNT - 1)
+#include "crossover.h"
 
 typedef struct BufferElement {
   LADSPA_Data Value;
   struct BufferElement * Previous;
   struct BufferElement * Next;
-  struct BufferElement * BandsAdditionalDelay[CROSSOVER_BAND_COUNT];
+  struct BufferElement * BandDelay[CROSSOVER_BAND_COUNT];
 } BufferElement;
 
 typedef struct {
   LADSPA_Data * m_pfInputBuffer;
   LADSPA_Data * m_pfOutputBuffers[CROSSOVER_BAND_COUNT];
-  struct BufferElement * m_psCircleBuffer;
   struct BufferElement * m_psEntrypoint;
+  struct BufferElement m_psCircleBuffer[CROSSOVER_BUFFER_SIZE];
 } CrossoverInstance;
-
-LADSPA_Descriptor * g_psCrossoverDescriptor = NULL;
-unsigned long g_lCircleBufferLength = 0;
-char * g_pcCrossoverInputPortName = PLUGIN_INPUT_PORT_NAME;
 
 LADSPA_Handle instantiate (
   const LADSPA_Descriptor * Descriptor,
@@ -41,12 +35,9 @@ LADSPA_Handle instantiate (
   unsigned long BandIndex;
 
   psCrossoverInstance = (CrossoverInstance *)malloc(sizeof(CrossoverInstance));
-  psCrossoverInstance->m_psCircleBuffer = (struct BufferElement *)malloc(
-    sizeof(struct BufferElement) * g_lCircleBufferLength
-  );
   for (
     psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
-      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
+      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + CROSSOVER_BUFFER_SIZE;
     psBufferCurrent < psBufferBarrier;
     psBufferCurrent++
   ) {
@@ -55,14 +46,14 @@ LADSPA_Handle instantiate (
       BandIndex < CROSSOVER_BAND_COUNT;
       BandIndex++
     ) {
-      psBufferCurrent->BandsAdditionalDelay[BandIndex] = psBufferCurrent -
-        Crossover[BandIndex].AdditionalDelay;
+      psBufferCurrent->BandDelay[BandIndex] = psBufferCurrent -
+        Crossover[BandIndex].Delay;
       if (
-        psBufferCurrent->BandsAdditionalDelay[BandIndex] <
+        psBufferCurrent->BandDelay[BandIndex] <
           psCrossoverInstance->m_psCircleBuffer
       ) {
-        psBufferCurrent->BandsAdditionalDelay[BandIndex] +=
-          g_lCircleBufferLength;
+        psBufferCurrent->BandDelay[BandIndex] +=
+          CROSSOVER_BUFFER_SIZE;
       }
     }
     if (psBufferCurrent == psCrossoverInstance->m_psCircleBuffer) {
@@ -92,7 +83,7 @@ void activate (
   psCrossoverInstance = (CrossoverInstance *)Instance;
   for (
     psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
-      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + g_lCircleBufferLength;
+      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + CROSSOVER_BUFFER_SIZE;
     psBufferCurrent < psBufferBarrier;
     psBufferCurrent++
   ) {
@@ -141,14 +132,14 @@ void run (
     ) {
       Accumulator = 0;
       psBufferCurrent =
-        psCrossoverInstance->m_psEntrypoint->BandsAdditionalDelay[lBandIndex];
+        psCrossoverInstance->m_psEntrypoint->BandDelay[lBandIndex];
       for (
         lCoefficientIndex = 0;
-        lCoefficientIndex < Crossover[lBandIndex].CoefficientsCount;
+        lCoefficientIndex < Crossover[lBandIndex].CoefficientCount;
         lCoefficientIndex++
       ) {
         Accumulator += psBufferCurrent->Value *
-          Crossover[lBandIndex].Coefficients[lCoefficientIndex];
+          Crossover[lBandIndex].CoefficientVector[lCoefficientIndex];
         psBufferCurrent = psBufferCurrent->Previous;
       }
       psCrossoverInstance->m_pfOutputBuffers[lBandIndex][lSampleIndex] =
@@ -158,88 +149,16 @@ void run (
   }
 }
 
-void cleanup(LADSPA_Handle Instance) {
-  CrossoverInstance * psCrossoverInstance;
-
-  psCrossoverInstance = (CrossoverInstance *)Instance;
-  free((struct BufferElement *)psCrossoverInstance->m_psCircleBuffer);
+void cleanup(
+  LADSPA_Handle Instance
+) {
   free(Instance);
-}
-
-void _init() {
-  unsigned long lPortIndex;
-  unsigned long lBandDelay;
-  char ** pcPortNames;
-  LADSPA_PortDescriptor * piPortDescriptors;
-  LADSPA_PortRangeHint * psPortRangeHints;
-
-  g_psCrossoverDescriptor = (LADSPA_Descriptor *)malloc(sizeof(LADSPA_Descriptor));
-  g_psCrossoverDescriptor->UniqueID = PLUGIN_ID;
-  g_psCrossoverDescriptor->Label = strdup(PLUGIN_LABEL);
-  g_psCrossoverDescriptor->Properties = LADSPA_PROPERTY_HARD_RT_CAPABLE;
-  g_psCrossoverDescriptor->Name  = strdup(PLUGIN_NAME);
-  g_psCrossoverDescriptor->Maker = strdup(PLUGIN_MAKER);
-  g_psCrossoverDescriptor->Copyright = strdup(PLUGIN_COPYRIGHT);
-  g_psCrossoverDescriptor->PortCount = PLUGIN_PORT_COUNT;
-  piPortDescriptors = (LADSPA_PortDescriptor *)calloc(
-    PLUGIN_PORT_COUNT,
-    sizeof(LADSPA_PortDescriptor)
-  );
-  g_psCrossoverDescriptor->PortDescriptors = (const LADSPA_PortDescriptor *)piPortDescriptors;
-  pcPortNames = (char **)calloc(PLUGIN_PORT_COUNT, sizeof(char *));
-  g_psCrossoverDescriptor->PortNames = (const char **)pcPortNames;
-  psPortRangeHints = (LADSPA_PortRangeHint *)calloc(
-    PLUGIN_PORT_COUNT,
-    sizeof(LADSPA_PortRangeHint)
-  );
-  g_psCrossoverDescriptor->PortRangeHints = (const LADSPA_PortRangeHint *)psPortRangeHints;
-  g_lCircleBufferLength = 0;
-  for (
-    lPortIndex = 0;
-    lPortIndex < PLUGIN_PORT_COUNT;
-    lPortIndex++
-  ) {
-    if (lPortIndex == 0) {
-      piPortDescriptors[lPortIndex] = LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = g_pcCrossoverInputPortName;
-      psPortRangeHints[lPortIndex].HintDescriptor = 0;
-    } else {
-      piPortDescriptors[lPortIndex] = LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO;
-      pcPortNames[lPortIndex] = Crossover[lPortIndex - 1].OutputPortName;
-      psPortRangeHints[lPortIndex].HintDescriptor = 0;
-      lBandDelay = Crossover[lPortIndex - 1].AdditionalDelay +
-          Crossover[lPortIndex - 1].CoefficientsCount;
-      if (lBandDelay > g_lCircleBufferLength)
-        g_lCircleBufferLength = lBandDelay;
-    }
-  }
-  g_psCrossoverDescriptor->instantiate = instantiate;
-  g_psCrossoverDescriptor->connect_port = connect_port;
-  g_psCrossoverDescriptor->activate = activate;
-  g_psCrossoverDescriptor->run = run;
-  g_psCrossoverDescriptor->run_adding = NULL;
-  g_psCrossoverDescriptor->set_run_adding_gain = NULL;
-  g_psCrossoverDescriptor->deactivate = NULL;
-  g_psCrossoverDescriptor->cleanup = cleanup;
-}
-
-void _fini() {
-  if (g_psCrossoverDescriptor) {
-    free((char *)g_psCrossoverDescriptor->Label);
-    free((char *)g_psCrossoverDescriptor->Name);
-    free((char *)g_psCrossoverDescriptor->Maker);
-    free((char *)g_psCrossoverDescriptor->Copyright);
-    free((LADSPA_PortDescriptor *)g_psCrossoverDescriptor->PortDescriptors);
-    free((char **)g_psCrossoverDescriptor->PortNames);
-    free((LADSPA_PortRangeHint *)g_psCrossoverDescriptor->PortRangeHints);
-    free(g_psCrossoverDescriptor);
-  }
 }
 
 const LADSPA_Descriptor * ladspa_descriptor(unsigned long Index) {
   switch (Index) {
     case 0:
-      return g_psCrossoverDescriptor;
+      return &CrossoverDescriptor;
     default:
       return NULL;
   }
