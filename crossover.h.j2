@@ -1,0 +1,84 @@
+#define CROSSOVER_BAND_COUNT {{ bands|count }}
+#define CROSSOVER_BUFFER_SIZE 10
+
+struct {
+  unsigned long Delay;
+  unsigned long CoefficientCount;
+  float * CoefficientVector;
+} Crossover[] = {
+  {%- for band in bands %}
+  {
+    {{ band.delay }}, {{ band.data|length }}, (float[]){
+      {%- for coefficient in band.data %}
+      {{ coefficient }},
+      {%- endfor %}
+    }
+  },
+  {%- endfor %}
+};
+
+LADSPA_Handle instantiate (
+  const LADSPA_Descriptor * Descriptor,
+  unsigned long SampleRate
+);
+
+void activate (
+  LADSPA_Handle Instance
+);
+
+void connect_port (
+  LADSPA_Handle Instance,
+  unsigned long Port,
+  LADSPA_Data * DataLocation
+);
+
+void run (
+  LADSPA_Handle Instance,
+  unsigned long SampleCount
+);
+
+void cleanup(
+  LADSPA_Handle Instance
+);
+
+LADSPA_PortDescriptor PortDescriptors[] = {
+  LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO,
+  {%- for i in range(bands|count) %}
+  LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+  {%- endfor %}
+};
+
+const char * PortNames[] = {
+  "Input",
+  {%- for band in bands %}
+  "{{ band.name }}",
+  {%- endfor %}  
+};
+
+LADSPA_PortRangeHint PortRangeHints[] = {
+  {%- for i in range(bands|count + 1) %}
+  {0},
+  {%- endfor %}
+};
+
+LADSPA_Descriptor CrossoverDescriptor = { 
+  {{ plugin.uniqueId }},
+  "{{ plugin.label }}",
+  LADSPA_PROPERTY_HARD_RT_CAPABLE,
+  "{{ plugin.name }}",
+  "{{ plugin.maker }}",
+  "{{ plugin.copyright }}",
+  {{ bands|count + 1 }},
+  PortDescriptors,
+  PortNames,
+  PortRangeHints,
+  NULL,
+  &instantiate,
+  &connect_port,
+  &activate,
+  &run,
+  NULL,
+  NULL,
+  NULL,
+  &cleanup,
+};

@@ -1,9 +1,9 @@
 # ladspa-fir-crossover
 
-### Usage:
-- make CROSSOVER_HEADER=example/3band.h LADSPA_TARGET=/usr/lib/ladspa/crossover.so
+### Build:
+- make CROSSOVER_YAML=example/3band.yaml
 
 ### Dependencies:
 - GNU toolchain (make, gcc, ld)
 - LADSPA SDK (ladspa.h)
-- libboost preprocessing library
+- python3 (yaml, jinja2)

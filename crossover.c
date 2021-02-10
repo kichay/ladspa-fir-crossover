@@ -1,14 +1,6 @@
 #include <stdlib.h>
 #include <ladspa.h>
 
-#ifndef CROSSOVER_HEADER
-#include "example/3band.h"
-#else
-#define STATIC_QUOTE(x) #x
-#define QUOTE(x) STATIC_QUOTE(x)
-#include QUOTE(CROSSOVER_HEADER)
-#endif
-
 #include "crossover.h"
 
 typedef struct BufferElement {

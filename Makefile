@@ -1,7 +1,8 @@
-CROSSOVER_HEADER ?= example/3band.h
-LADSPA_TARGET ?= crossover.so
+PP = ./preprocessor.py
+CROSSOVER_YAML ?= example/3band.yaml
 CFLAGS=-c -Wall -fPIC -ffast-math -O2 -D PIC
 
 all:
-	$(CC) $(CFLAGS) -D CROSSOVER_HEADER="$(CROSSOVER_HEADER)" -o crossover.o crossover.c
-	$(LD) -shared -o $(LADSPA_TARGET) crossover.o
+	$(PP) $(CROSSOVER_YAML) < crossover.h.j2 > crossover.h
+	$(CC) $(CFLAGS) -o crossover.o crossover.c
+	$(LD) -shared -o crossover.so crossover.o
