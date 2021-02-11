@@ -1,7 +1,7 @@
 # ladspa-fir-crossover
 
 ### Build:
-- make CROSSOVER_YAML=example/3band.yaml
+- make CYAML=example/3band.yaml
 
 ### Dependencies:
 - GNU toolchain (make, gcc, ld)
