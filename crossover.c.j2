@@ -9,10 +9,10 @@
 #define CROSSOVER_BUFFER_SIZE {{ bufferCandidates|max }}
 
 struct {
-  unsigned long Delay;
-  unsigned long CoefficientCount;
-  float * CoefficientVector;
-} Crossover[] = {
+  unsigned long delay;
+  unsigned long coefficientCount;
+  float * coefficientVector;
+} crossover[] = {
   {%- for band in bands %}
   {
     {{ band.delay }}, {{ band.data|length }}, (float[]){
@@ -24,171 +24,171 @@ struct {
   {%- endfor %}
 };
 
-typedef struct BufferElement {
-  LADSPA_Data Value;
-  struct BufferElement * Previous;
-  struct BufferElement * Next;
-  struct BufferElement * BandDelay[CROSSOVER_BAND_COUNT];
-} BufferElement;
+typedef struct bufferElement {
+  LADSPA_Data value;
+  struct bufferElement * previous;
+  struct bufferElement * next;
+  struct bufferElement * delayPoints[CROSSOVER_BAND_COUNT];
+} bufferElement;
 
 typedef struct {
-  LADSPA_Data * m_pfInputBuffer;
-  LADSPA_Data * m_pfOutputBuffers[CROSSOVER_BAND_COUNT];
-  struct BufferElement * m_psEntrypoint;
-  struct BufferElement m_psCircleBuffer[CROSSOVER_BUFFER_SIZE];
-} CrossoverInstance;
+  LADSPA_Data * inputBuffer;
+  LADSPA_Data * outputBuffers[CROSSOVER_BAND_COUNT];
+  struct bufferElement * entrypoint;
+  struct bufferElement circleBuffer[CROSSOVER_BUFFER_SIZE];
+} crossoverInstance;
 
 LADSPA_Handle instantiate (
-  const LADSPA_Descriptor * Descriptor,
-  unsigned long SampleRate
+  const LADSPA_Descriptor * descriptor,
+  unsigned long sampleRate
 ) {
-  CrossoverInstance * psCrossoverInstance;
-  struct BufferElement * psBufferCurrent;
-  struct BufferElement * psBufferBarrier;
-  unsigned long BandIndex;
+  crossoverInstance * instance;
+  struct bufferElement * bufferCurrent;
+  struct bufferElement * bufferBarrier;
+  unsigned long bandIndex;
 
-  psCrossoverInstance = (CrossoverInstance *)malloc(sizeof(CrossoverInstance));
+  instance = (crossoverInstance *)malloc(sizeof(crossoverInstance));
   for (
-    psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
-      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + CROSSOVER_BUFFER_SIZE;
-    psBufferCurrent < psBufferBarrier;
-    psBufferCurrent++
+    bufferCurrent = instance->circleBuffer,
+      bufferBarrier = instance->circleBuffer + CROSSOVER_BUFFER_SIZE;
+    bufferCurrent < bufferBarrier;
+    bufferCurrent++
   ) {
     for (
-      BandIndex = 0;
-      BandIndex < CROSSOVER_BAND_COUNT;
-      BandIndex++
+      bandIndex = 0;
+      bandIndex < CROSSOVER_BAND_COUNT;
+      bandIndex++
     ) {
-      psBufferCurrent->BandDelay[BandIndex] = psBufferCurrent -
-        Crossover[BandIndex].Delay;
+      bufferCurrent->delayPoints[bandIndex] = bufferCurrent -
+        crossover[bandIndex].delay;
       if (
-        psBufferCurrent->BandDelay[BandIndex] <
-          psCrossoverInstance->m_psCircleBuffer
+        bufferCurrent->delayPoints[bandIndex] <
+          instance->circleBuffer
       ) {
-        psBufferCurrent->BandDelay[BandIndex] +=
+        bufferCurrent->delayPoints[bandIndex] +=
           CROSSOVER_BUFFER_SIZE;
       }
     }
-    if (psBufferCurrent == psCrossoverInstance->m_psCircleBuffer) {
-      psBufferCurrent->Previous = psBufferBarrier - 1;
-      psBufferCurrent->Next = psBufferCurrent + 1;
+    if (bufferCurrent == instance->circleBuffer) {
+      bufferCurrent->previous = bufferBarrier - 1;
+      bufferCurrent->next = bufferCurrent + 1;
       continue;
     }
-    if (psBufferCurrent == psBufferBarrier - 1) {
-      psBufferCurrent->Next = psCrossoverInstance->m_psCircleBuffer;
-      psBufferCurrent->Previous = psBufferCurrent - 1;
+    if (bufferCurrent == bufferBarrier - 1) {
+      bufferCurrent->next = instance->circleBuffer;
+      bufferCurrent->previous = bufferCurrent - 1;
       continue;
     }
-    psBufferCurrent->Next = psBufferCurrent + 1;
-    psBufferCurrent->Previous = psBufferCurrent - 1;
+    bufferCurrent->next = bufferCurrent + 1;
+    bufferCurrent->previous = bufferCurrent - 1;
   }
-  psCrossoverInstance->m_psEntrypoint = psCrossoverInstance->m_psCircleBuffer;
-  return (LADSPA_Handle)psCrossoverInstance;
+  instance->entrypoint = instance->circleBuffer;
+  return (LADSPA_Handle)instance;
 }
 
 void activate (
-  LADSPA_Handle Instance
+  LADSPA_Handle handle
 ) {
-  CrossoverInstance * psCrossoverInstance;
-  struct BufferElement * psBufferCurrent;
-  struct BufferElement * psBufferBarrier;
+  crossoverInstance * instance;
+  struct bufferElement * bufferCurrent;
+  struct bufferElement * bufferBarrier;
 
-  psCrossoverInstance = (CrossoverInstance *)Instance;
+  instance = (crossoverInstance *)handle;
   for (
-    psBufferCurrent = psCrossoverInstance->m_psCircleBuffer,
-      psBufferBarrier = psCrossoverInstance->m_psCircleBuffer + CROSSOVER_BUFFER_SIZE;
-    psBufferCurrent < psBufferBarrier;
-    psBufferCurrent++
+    bufferCurrent = instance->circleBuffer,
+      bufferBarrier = instance->circleBuffer + CROSSOVER_BUFFER_SIZE;
+    bufferCurrent < bufferBarrier;
+    bufferCurrent++
   ) {
-    psBufferCurrent->Value = 0;
+    bufferCurrent->value = 0;
   }
 }
 
 void connect_port (
-  LADSPA_Handle Instance,
-  unsigned long Port,
-  LADSPA_Data * DataLocation
+  LADSPA_Handle handle,
+  unsigned long port,
+  LADSPA_Data * dataLocation
 ) {
-  CrossoverInstance * psCrossoverInstance;
+  crossoverInstance * instance;
 
-  psCrossoverInstance = (CrossoverInstance *)Instance;
-  if (Port == 0) {
-    psCrossoverInstance->m_pfInputBuffer = DataLocation;
-  } else if (0 < Port && Port <= CROSSOVER_BAND_COUNT) {
-    psCrossoverInstance->m_pfOutputBuffers[Port - 1] = DataLocation;
+  instance = (crossoverInstance *)handle;
+  if (port == 0) {
+    instance->inputBuffer = dataLocation;
+  } else if (0 < port && port <= CROSSOVER_BAND_COUNT) {
+    instance->outputBuffers[port - 1] = dataLocation;
   }
 }
 
 void run (
-  LADSPA_Handle Instance,
-  unsigned long SampleCount
+  LADSPA_Handle handle,
+  unsigned long sampleCount
 ) {
-  CrossoverInstance * psCrossoverInstance;
-  unsigned long lSampleIndex;
-  unsigned long lBandIndex;
-  unsigned long lCoefficientIndex;
-  LADSPA_Data Accumulator;
-  struct BufferElement * psBufferCurrent;
+  crossoverInstance * instance;
+  unsigned long sampleIndex;
+  unsigned long bandIndex;
+  unsigned long coefficientIndex;
+  LADSPA_Data accumulator;
+  struct bufferElement * bufferCurrent;
 
-  psCrossoverInstance = (CrossoverInstance *)Instance;
+  instance = (crossoverInstance *)handle;
   for (
-    lSampleIndex = 0;
-    lSampleIndex < SampleCount;
-    lSampleIndex++
+    sampleIndex = 0;
+    sampleIndex < sampleCount;
+    sampleIndex++
   ) {
-    psCrossoverInstance->m_psEntrypoint->Value =
-      psCrossoverInstance->m_pfInputBuffer[lSampleIndex];
+    instance->entrypoint->value =
+      instance->inputBuffer[sampleIndex];
     for (
-      lBandIndex = 0;
-      lBandIndex < CROSSOVER_BAND_COUNT;
-      lBandIndex++
+      bandIndex = 0;
+      bandIndex < CROSSOVER_BAND_COUNT;
+      bandIndex++
     ) {
-      Accumulator = 0;
-      psBufferCurrent =
-        psCrossoverInstance->m_psEntrypoint->BandDelay[lBandIndex];
+      accumulator = 0;
+      bufferCurrent =
+        instance->entrypoint->delayPoints[bandIndex];
       for (
-        lCoefficientIndex = 0;
-        lCoefficientIndex < Crossover[lBandIndex].CoefficientCount;
-        lCoefficientIndex++
+        coefficientIndex = 0;
+        coefficientIndex < crossover[bandIndex].coefficientCount;
+        coefficientIndex++
       ) {
-        Accumulator += psBufferCurrent->Value *
-          Crossover[lBandIndex].CoefficientVector[lCoefficientIndex];
-        psBufferCurrent = psBufferCurrent->Previous;
+        accumulator += bufferCurrent->value *
+          crossover[bandIndex].coefficientVector[coefficientIndex];
+        bufferCurrent = bufferCurrent->previous;
       }
-      psCrossoverInstance->m_pfOutputBuffers[lBandIndex][lSampleIndex] =
-        Accumulator;
+      instance->outputBuffers[bandIndex][sampleIndex] =
+        accumulator;
     }
-    psCrossoverInstance->m_psEntrypoint = psCrossoverInstance->m_psEntrypoint->Next;
+    instance->entrypoint = instance->entrypoint->next;
   }
 }
 
 void cleanup(
-  LADSPA_Handle Instance
+  LADSPA_Handle handle
 ) {
-  free(Instance);
+  free(handle);
 }
 
-LADSPA_PortDescriptor PortDescriptors[] = {
+LADSPA_PortDescriptor portDescriptors[] = {
   LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO,
   {%- for i in range(bands|count) %}
   LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
   {%- endfor %}
 };
 
-const char * PortNames[] = {
+const char * portNames[] = {
   "Input",
   {%- for band in bands %}
   "{{ band.name }}",
   {%- endfor %}  
 };
 
-LADSPA_PortRangeHint PortRangeHints[] = {
+LADSPA_PortRangeHint portRangeHints[] = {
   {%- for i in range(bands|count + 1) %}
   {0},
   {%- endfor %}
 };
 
-LADSPA_Descriptor CrossoverDescriptor = { 
+LADSPA_Descriptor crossoverDescriptor = { 
   {{ plugin.uniqueId }},
   "{{ plugin.label }}",
   LADSPA_PROPERTY_HARD_RT_CAPABLE,
@@ -196,9 +196,9 @@ LADSPA_Descriptor CrossoverDescriptor = {
   "{{ plugin.maker }}",
   "{{ plugin.copyright }}",
   {{ bands|count + 1 }},
-  PortDescriptors,
-  PortNames,
-  PortRangeHints,
+  portDescriptors,
+  portNames,
+  portRangeHints,
   NULL,
   &instantiate,
   &connect_port,
@@ -210,8 +210,8 @@ LADSPA_Descriptor CrossoverDescriptor = {
   &cleanup,
 };
 
-const LADSPA_Descriptor * ladspa_descriptor(unsigned long Index) {
-  if (Index == 0)
-    return &CrossoverDescriptor;
+const LADSPA_Descriptor * ladspa_descriptor(unsigned long index) {
+  if (index == 0)
+    return &crossoverDescriptor;
   return NULL;
 }
