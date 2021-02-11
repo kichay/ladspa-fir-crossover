@@ -1,15 +1,28 @@
 #include <stdlib.h>
 #include <ladspa.h>
 
-#ifndef CROSSOVER_HEADER
-#include "example/3band.h"
-#else
-#define STATIC_QUOTE(x) #x
-#define QUOTE(x) STATIC_QUOTE(x)
-#include QUOTE(CROSSOVER_HEADER)
-#endif
+#define CROSSOVER_BAND_COUNT {{ bands|count }}
+{%- set bufferCandidates = [] %}
+{%- for band in bands %}
+{%- if bufferCandidates.append(band.delay + band.data|length) %}{% endif %}
+{%- endfor %}
+#define CROSSOVER_BUFFER_SIZE {{ bufferCandidates|max }}
 
-#include "crossover.h"
+struct {
+  unsigned long Delay;
+  unsigned long CoefficientCount;
+  float * CoefficientVector;
+} Crossover[] = {
+  {%- for band in bands %}
+  {
+    {{ band.delay }}, {{ band.data|length }}, (float[]){
+      {%- for coefficient in band.data %}
+      {{ coefficient }},
+      {%- endfor %}
+    }
+  },
+  {%- endfor %}
+};
 
 typedef struct BufferElement {
   LADSPA_Data Value;
@@ -155,11 +168,50 @@ void cleanup(
   free(Instance);
 }
 
+LADSPA_PortDescriptor PortDescriptors[] = {
+  LADSPA_PORT_INPUT | LADSPA_PORT_AUDIO,
+  {%- for i in range(bands|count) %}
+  LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+  {%- endfor %}
+};
+
+const char * PortNames[] = {
+  "Input",
+  {%- for band in bands %}
+  "{{ band.name }}",
+  {%- endfor %}  
+};
+
+LADSPA_PortRangeHint PortRangeHints[] = {
+  {%- for i in range(bands|count + 1) %}
+  {0},
+  {%- endfor %}
+};
+
+LADSPA_Descriptor CrossoverDescriptor = { 
+  {{ plugin.uniqueId }},
+  "{{ plugin.label }}",
+  LADSPA_PROPERTY_HARD_RT_CAPABLE,
+  "{{ plugin.name }}",
+  "{{ plugin.maker }}",
+  "{{ plugin.copyright }}",
+  {{ bands|count + 1 }},
+  PortDescriptors,
+  PortNames,
+  PortRangeHints,
+  NULL,
+  &instantiate,
+  &connect_port,
+  &activate,
+  &run,
+  NULL,
+  NULL,
+  NULL,
+  &cleanup,
+};
+
 const LADSPA_Descriptor * ladspa_descriptor(unsigned long Index) {
-  switch (Index) {
-    case 0:
-      return &CrossoverDescriptor;
-    default:
-      return NULL;
-  }
+  if (Index == 0)
+    return &CrossoverDescriptor;
+  return NULL;
 }

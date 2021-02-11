@@ -1,7 +1,8 @@
-CROSSOVER_HEADER ?= example/3band.h
-LADSPA_TARGET ?= crossover.so
-CFLAGS=-c -Wall -fPIC -ffast-math -O2 -D PIC
+CYAML ?= example/3band.yaml
+PP = ./j2render.py
+CFLAGS = -c -Wall -fPIC -ffast-math -O2 -D PIC
 
 all:
-	$(CC) $(CFLAGS) -D CROSSOVER_HEADER="$(CROSSOVER_HEADER)" -o crossover.o crossover.c
-	$(LD) -shared -o $(LADSPA_TARGET) crossover.o
+	$(PP) $(CYAML) < crossover.c.j2 > crossover.c
+	$(CC) $(CFLAGS) -o crossover.o crossover.c
+	$(LD) -shared -o crossover.so crossover.o
